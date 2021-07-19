@@ -1,0 +1,186 @@
+FDB Automation
+==============
+
+Summary
+-------
+
+1. Make sure the requirements are satisfied.
+2. Each day, run 4 stages of CompuRisk's automation.
+   Example commands for `%%$ODATE` placeholder date (e.g. on 31/01/2021 its value will be `20210131`) if all scripts are located in "C:\Users\bankuser01\Desktop\FDB_Automation\ScriptsAndDocs" folder:
+   * Stage 1: `C:\Users\bankuser01\Desktop\FDB_Automation\ScriptsAndDocs\prepare.bat %%$ODATE "C:\Users\bankuser01\Desktop\FDB_Automation\ScriptsAndDocs\config.bat"`
+   * Stage 2: `C:\Users\bankuser01\Desktop\FDB_Automation\ScriptsAndDocs\run.bat etl %%$ODATE "C:\Users\bankuser01\Desktop\FDB_Automation\ScriptsAndDocs\config.bat"`
+   * Stage 3: `C:\Users\bankuser01\Desktop\FDB_Automation\ScriptsAndDocs\run.bat convert %%$ODATE "C:\Users\bankuser01\Desktop\FDB_Automation\ScriptsAndDocs\config.bat"`
+   * Stage 4: `C:\Users\bankuser01\Desktop\FDB_Automation\ScriptsAndDocs\run.bat report %%$ODATE "C:\Users\bankuser01\Desktop\FDB_Automation\ScriptsAndDocs\config.bat"`
+3. At each stage:
+   * 0, 5, 10 exit codes are good. Continue to the next stage.
+   * 1, 2, 15, 20, 25 exit codes are bad. Repeat the stage or halt and investigate the reason for failure.
+
+4. All of the results will be found in a dated folder, e.g. a folder named `%%$ODATE` (e.g. on 31/01/2021 named `20210131`).
+
+Requirements
+------------
+
+1. Installation of `CompuRisk`.
+1. Installation of `MS Office`, that includes `Excel` and `Access`.
+1. A `Data` folder that will contain all input daily data files, e.g. from BaNCS or Bloomberg.
+   > **Note**
+   >
+   > * All file names should be in english and should not contain spaces.
+   > * A name can contain an optional timestamp as a suffix (before the extension) that starts with `_20`,
+   >   i.e. an underscore followed by a 4 digit year (which 1st 2 digits are 20).
+   >
+   >   Examples of valid names:
+   >   * BaNCS_deposits_20210217_001444.csv
+   >   * Market_Curves_and_TP.xls
+   >   * Bloomberg_data_20210131.xlsx
+   >
+   >   Examples of invalid names:
+   >   * BaNCS_deposits_17-02-2021_001444.csv
+   >   * Market Curves and TP.xls
+   >   * Bloomberg_data_210131.xlsx
+
+1. A `Template` folder that will contain template files that will remain the same for all execution dates, and are expected to be changed only rarely due to business requirements. E.g.
+   * CompuRisk's project file.
+   * CompuRisk's database (.mdb) file.
+   * CompuRisk's report layouts definitions.
+   * Constant input files.
+1. An `Archive` folder that will contain dated sub-folders for each execution date.
+   * Its sub-folders will be created during the automation
+     and will contain all of the products of the automation,
+     e.g. configurations, logs and reports.
+   * The names of the sub-folders will be in `<YYYYMMDD>` format, e.g. `20210131`.
+
+Execution Scripts and Flow
+--------------------------
+
+1. `config.bat` file will contain all execution configurations which will be used in other scripts. E.g.
+   * Paths to `CompuRisk`'s and `MS Access` executables.
+   * Paths to `Data`, `Template` and `Archive` folders defined above.
+   * Lists of expected input and output files.
+1. `prepare.bat` script should be run 1st (`prepare` stage).
+   * It collects all of the files from `Template` and `Data` folders,
+     and updates all of CompuRisk's configuration to the execution date.
+   * Its result is a newly created `<YYYYMMDD>` sub-folder of `Archive` folder,
+     with all of the needed files and folders, ready for CompuRisk's execution.
+   * Call signature: `prepare.bat [<YYYYMMDD> [path\to\config\file.bat]]`. E.g.
+     * `prepare.bat 20210131 D:\Scripts\MyAutomationConfig.bat` -
+       executes `prepare.bat` script for 31/01/2021 execution date
+       and uses automation configurations from "D:\Scripts\MyAutomationConfig.bat" file.
+     * `prepare.bat 20210210` - executes `prepare.bat` script for 10/02/2021 execution date
+       and uses `config.bat` automation configurations file located in the current working directory
+       (where the script was started in).
+     * `prepare.bat` - executes `prepare.bat` script for the current system date
+       and uses `config.bat` automation configurations file located in the current working directory
+       (where the script was started in).
+   * Possible exit codes:
+     * 0 - Success.
+     * 1 - Critical error with an unidentified source.
+     * 2 - Error in one of script's stages, e.g. a configuration or input file.
+
+     > **Note**
+     >
+     > * Any non-0 exit code will require a script's repeated execution.
+     > * In case of a failure, `<YYYYMMDD>` folder will be deleted.
+
+1. `run.bat` script will be run 3 times for `etl`, `convert` and `report` (in this order) stages of automation.
+   * This script calls to CompuRisk and passes it the required execution parameters.
+   * Its results are either CompuRisk's database population
+     and/or log and report files generated by CompuRisk.
+   * Call signature: `run.bat <stage> [<YYYYMMDD> [path\to\config\file.bat]]`. E.g.
+     * `run.bat etl 20210131 D:\Scripts\MyAutomationConfig.bat` -
+       executes `etl` stage for 31/01/2021 execution date
+       and uses automation configurations from "D:\Scripts\MyAutomationConfig.bat" file.
+     * `run.bat convert 20210210` - executes `convert` stage for 10/02/2021 execution date
+       and uses `config.bat` automation configurations file located in the current working directory
+       (where the script was started in).
+     * `run.bat report` - executes`convert` stage for the current system date
+       and uses `config.bat` automation configurations file located in the current working directory
+       (where the script was started in).
+   * Possible exit codes:
+     * 0 - Success.
+     * 1 - Critical error with an unidentified source.
+     * 2 - Error in one of script's stages, e.g. one or more of the expected output logs or reports are missing.
+     * 5 - Minor warning. Used for script level warning and is not returned by CompuRisk.
+     * 10 - Warning.
+     * 15 - Important warning.
+     * 20 - Severe warning.
+     * 25 - Error.
+
+     > **Note**
+     >
+     > * 0, 1, 10, 15, 20 and 25 exit codes can be returned by CompuRisk.
+     >
+     >   2 and 5 exit codes are only used within the scripts.
+     > * 1, 2 and 25 exit codes require a repeated execution of the stage.
+     > * 5, 10, 15, 20 may or may not require a repeated execution of the stage - depends on bank's chosen threshold (in [5, 25] range).
+     >
+     >   Recommended threshold is 15, i.e. to require a repeated execution only for 15 and greater exit codes.
+
+1. After the 4 script executions (`prepare.bat` and the 3 stages of `run.bat`), all of the output logs and reports will be located in `Output` sub-folder of the `<YYYYMMDD>` folder (located in `Archive` folder).
+
+> **Note**
+>
+> It is possible that in the future, the 3 run stages (`etl`, `convert` and `report`) will be split into additional stages.
+> In this case, the treatment of the new stages will be the same as of the current 3,
+> and all of the above will hold for the new stages as well.
+
+Output Structure
+----------------
+
+* `FDB.crproj` - CompuRisk's project file. Created and configured during `prepare` stage.
+* `Contracts.mdb` - CompuRisk's database file. Created during `prepare` stage and populated during `etl` stage.
+* `Input` - a folder that contains all of the required input files (possibly located in sub-folders). Created during `prepare` stage.
+* `Layouts` - a folder that contains .xml file used by CompuRisk for reports' layout definition. Created during `prepare` stage.
+* `Output` - a folder that contains the following 2 sub-folders.
+  1. `Logs` - contains all CompuRisk's execution logs (3 - 1 for each of `etl`, `convert` and `report` stages), and the conversion log (outputed during `convert` stage).
+  1. `Reports` - contains all of the reports outputed during `reports` stage.
+  > **Note**
+  >
+  > * All of output log and report file names are prepended with a date in `<YYYYMMDD>_` format.
+  >
+  >   E.g. etl's execution log file's name for 31/01/2021 will be `20210131_ETL.log`.
+  > * Missing report and conversion log files are considered errors (exit code = 25).
+  > * Missing execution log files are considered warnings (exit code = 10).
+
+Comments
+--------
+
+1. For exit codes other than 1, and 2, i.e. 0, 5, 10, 15, 20 or 25, largest applicable code will be returned, and will shadow any other (smaller) such exit codes. E.g.
+   * If during `etl` there is both a DB compacting error (exit code = 5) and a CompuRisk's warning (exit code = 10), returned exit code will be 10.
+   * If during `reports` stage, an exit code for 1 report is 0 (success), for another is 10 (warning) and for a 3rd report is 25 (error), 25 will be returned.
+
+   > **Note**: 1 and 2 exit codes are returned when happen, and can't be shadowed by other exit codes.
+
+1. Scripts progress logs can be outputed to file.
+   E.g. `prepare.bat 20210131>>compurisk_automation_progress.log`
+   will append a detailed log of each file being copied and configurations being edited to `compurisk_automation_progress.log` file.
+   This may prove useful when trying to investigate the source of an erroneous exit code.
+   > **Note**: All progress log entries are timestamped.
+
+1. The scripts use a heuristic to parse dates when a date is not explicitly passed to a script
+   and for timestamping progress log entries.
+
+   This heuristic is located in `config.bat` file (for when a date is not explicitly passed to a script)
+   and in the end of each script under `:EchoDateTime` label (for timestamping progress log entries).
+
+   This heuristic is dependent on system's regional format,
+   it may require tweaking depending on the output of system's `date /t` and `time /t` commands.
+
+   By default, the heuristic is calibrated for `<DD/MM/YYYY>`, e.g. `31/01/2021`, output format of `date /t` command,
+   and `<HH:MM:SS>` (or  `<HH:MM>`), e.g. `22:30:00` (pr `22:30`) output format of `time /t` command.
+
+1. `config.bat` script supports several, execution flags that may or may not be checked depending on bank's preferences:
+
+   * `OVERRIDE` (default 0). Used in `prepare` stage.
+     If true, i.e. not 0, and `<YYYYMMDD>` `Archive`'s sub-folder already exists,
+     will remove and recreate it during `prepare` stage.
+     Otherwise will return exit code 2 if the sub-folder exists.
+   * `COMPACT` (default 1). Used in `etl` stage.
+     If true, i.e. not 0, will try to compact CompuRisk's database file before and after each stage of etl.
+     If the compacting fails, will return exit code 5.
+   * `CLEAN` (default 1). Used in all stages except the 1st (`prepare`).
+     If true, i.e. not 0, will delete CompuRisk's internal output files, i.e.
+     * CompuRisk's auto-backup project files created before each execution.
+     * Contents of `<DD/MM/YYYY>\Output\Temp` folder containing CompuRisk's outputed internal files that are not of interest to the end user.
+   * `DEBUG` (default 0). Used in all stages except the 1st (`prepare`).
+     If true, i.e. not 0, will add additional, debug, messages to the execution log (it doesn't effect the execution logic).

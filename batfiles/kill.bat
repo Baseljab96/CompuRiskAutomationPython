@@ -1,0 +1,1 @@
+taskkill /f /im CompuRisk.exe & taskkill /f /im Excel.exe

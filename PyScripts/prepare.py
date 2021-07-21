@@ -36,9 +36,10 @@ except ImportError:
     print(timestamp +"ERROR: Automation configuration file was not found.")
     exit(2)
 ###Creating a work directory with the relevant date
-date = datetime.strptime('20200101','%Y%m%d')
+date = datetime.strptime('20210523','%Y%m%d')
 path = Paths(date)
 WORKDIR = path.workdir
+TEMPDIR = path.templatedir
 print(WORKDIR)
 cwd = os.getcwd()
 print(cwd)
@@ -59,7 +60,7 @@ def createfolder(path, override):
     logger.info('DONE')
     logger.info(f"{path} FOLDER HAS BEEN CREATED")
  
-
+createfolder(WORKDIR,1)
 
 
 #####STORING FILEINFO INSIDE NAMED TUPLES
@@ -158,10 +159,11 @@ input_files.append(FileInfo(
 ))
 #####LOANS FILE MISSING ADD WHEN NEEDED
 
-
+rundate = 20210523
+rundate = str(rundate)
 def find_source(source,name,IsDated,TargetDir):
     if IsDated == True:
-         newpath= os.path.join(source, name + '*[0-9].*')
+         newpath= os.path.join(source, name + '_' + rundate + '*.*')
          finalpath = glob(str(newpath))
          print(finalpath)
          return (finalpath)
@@ -183,3 +185,23 @@ for file in input_files:
     
     ### if file.FileName.endswith('.crproj'):
     ###     pass
+
+#### COPYING THE FDB PROJECT AND CONTRACTS 
+projpath = r'C:\\Users\\baselj\Desktop\\FDB_Automation\\Template\\FDB.crproj'
+projtargetpath = f"C:\\Users\\baselj\Desktop\\FDB_Automation\\Archive\\{rundate}\\FDB.crproj"
+shutil.copy(projpath,projtargetpath)
+contractspath = r'C:\\Users\\baselj\Desktop\\FDB_Automation\\Template\\Contracts.mdb'
+contractstargetpath = f"C:\\Users\\baselj\Desktop\\FDB_Automation\\Archive\\{rundate}\\Contracts.mdb"
+shutil.copy(contractspath,contractstargetpath)
+
+
+### COPYING LAYOUTS, LIQUIDITY AND OUTPUT FOLDERS FROM TEMPLATE
+layoutspath = r'C:\\Users\\baselj\Desktop\\FDB_Automation\\Template\\Layouts'
+layoutstargetpath = f"C:\\Users\\baselj\Desktop\\FDB_Automation\\Archive\\{rundate}\\Layouts"
+shutil.copytree(layoutspath,layoutstargetpath)
+outputspath = r'C:\\Users\\baselj\Desktop\\FDB_Automation\\Template\\Output'
+outputstargetpath = f"C:\\Users\\baselj\Desktop\\FDB_Automation\\Archive\\{rundate}\\Output"
+shutil.copytree(outputspath,outputstargetpath)
+liquiditypath = r'C:\\Users\\baselj\Desktop\\FDB_Automation\\Template\\Liquidity'
+liquiditytargetpath = f"C:\\Users\\baselj\Desktop\\FDB_Automation\\Archive\\{rundate}\\Liquidity"
+shutil.copytree(liquiditypath,liquiditytargetpath)
